@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>英文日期时间听写</title>
+<title>Date &amp; Time Dictation</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -171,48 +171,47 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 <body>
 
 <header>
-  <h1>🎧 英文日期时间听写</h1>
-  <p>Date &amp; Time Dictation Practice</p>
+  <h1>🎧 Date &amp; Time Dictation</h1>
 </header>
 
 <div class="tts-bar">
   <div class="tts-dot" id="ttsDot"></div>
-  <div id="ttsMsg">正在初始化语音引擎…</div>
+  <div id="ttsMsg">Initializing speech engine…</div>
 </div>
 
-<!-- 两个板块 -->
+<!-- tabs -->
 <div class="tabs">
-  <button class="tab active" onclick="switchTab(0)">🔤 短语听写</button>
-  <button class="tab" onclick="switchTab(1)">🗣️ 句子听写</button>
+  <button class="tab active" onclick="switchTab(0)">🔤 Phrase</button>
+  <button class="tab" onclick="switchTab(1)">🗣️ Sentence</button>
 </div>
 
-<!-- 选项卡：选择要包含的成分 -->
+<!-- component selector -->
 <div class="selector-panel">
-  <div class="selector-title">选择听写内容（可多选）</div>
+  <div class="selector-title">Include in dictation (multi-select)</div>
   <div class="chips">
-    <button class="chip" id="chip-weekday" onclick="toggleChip('weekday')">📅 星期</button>
-    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 日期（月+日）</button>
-    <button class="chip" id="chip-year" onclick="toggleChip('year')">📆 年份</button>
-    <button class="chip on" id="chip-time" onclick="toggleChip('time')">🕐 时间</button>
+    <button class="chip" id="chip-weekday" onclick="toggleChip('weekday')">📅 Weekday</button>
+    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 Date (M+D)</button>
+    <button class="chip" id="chip-year" onclick="toggleChip('year')">📆 Year</button>
+    <button class="chip on" id="chip-time" onclick="toggleChip('time')">🕐 Time</button>
   </div>
-  <div class="selector-hint" id="selectorHint">当前：<span id="hintText">日期（月+日）+ 时间</span></div>
+  <div class="selector-hint" id="selectorHint">Active: <span id="hintText">Date (M+D) + Time</span></div>
 </div>
 
 <div class="card">
-  <div class="counter">题目 <span id="itemIndex">1</span> &nbsp;|&nbsp; 已完成 <span id="totalDone">0</span> 题</div>
+  <div class="counter">Question <span id="itemIndex">1</span> &nbsp;|&nbsp; Done: <span id="totalDone">0</span></div>
 
   <div class="audio-section">
     <button class="play-btn" id="playBtn" onclick="handlePlay()">▶</button>
     <div class="audio-info">
-      <p>点击 ▶ 播放，填写你听到的内容后按提交。</p>
+      <p>Click ▶ to play, then type what you hear and submit.</p>
       <div class="shortcut-row">
-        <span><kbd>Ctrl</kbd> 重播</span>
-        <span><kbd>Enter</kbd> 提交/下一题</span>
-        <span><kbd>←</kbd> 上一题</span>
-        <span><kbd>→</kbd> 下一题</span>
+        <span><kbd>Ctrl</kbd> Replay</span>
+        <span><kbd>Enter</kbd> Submit / Next</span>
+        <span><kbd>←</kbd> Previous</span>
+        <span><kbd>→</kbd> Next</span>
       </div>
       <div class="speed-row">
-        <label>语速</label>
+        <label>Speed</label>
         <input type="range" id="speedRange" min="0.5" max="1.5" step="0.05" value="0.85" oninput="updateSpeed()">
         <span class="speed-val" id="speedVal">0.85×</span>
       </div>
@@ -222,7 +221,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
   <div class="sentence-display" id="sentenceDisplay"></div>
 
   <div class="input-section">
-    <label class="input-label" id="inputLabel">输入你听到的内容</label>
+    <label class="input-label" id="inputLabel">Type what you hear</label>
     <input class="answer-input" type="text" id="answerInput"
       placeholder="e.g. half past three, Monday March 15th 2024"
       autocomplete="off" autocorrect="off" spellcheck="false">
@@ -230,8 +229,8 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 
   <div class="btn-row">
     <button class="btn btn-nav" id="prevBtn" onclick="prevItem()" disabled>◀</button>
-    <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">✓ 提交答案</button>
-    <button class="btn btn-secondary" onclick="nextItem()">跳过</button>
+    <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">✓ Submit</button>
+    <button class="btn btn-secondary" onclick="nextItem()">Skip</button>
     <button class="btn btn-nav" onclick="nextItem()">▶</button>
   </div>
 
@@ -241,10 +240,10 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="stat-num" id="sTotal" style="color:var(--accent)">0</div><div class="stat-label">总计</div></div>
-    <div class="stat"><div class="stat-num" id="sCorrect" style="color:var(--correct)">0</div><div class="stat-label">正确</div></div>
-    <div class="stat"><div class="stat-num" id="sWrong" style="color:var(--wrong)">0</div><div class="stat-label">错误</div></div>
-    <div class="stat"><div class="stat-num" id="sRate" style="color:var(--accent2)">—</div><div class="stat-label">正确率</div></div>
+    <div class="stat"><div class="stat-num" id="sTotal" style="color:var(--accent)">0</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-num" id="sCorrect" style="color:var(--correct)">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat"><div class="stat-num" id="sWrong" style="color:var(--wrong)">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat"><div class="stat-num" id="sRate" style="color:var(--accent2)">—</div><div class="stat-label">Accuracy</div></div>
   </div>
 </div>
 
@@ -259,8 +258,8 @@ const TTS = {
     document.getElementById('ttsMsg').textContent = msg;
   },
   init() {
-    if (!('speechSynthesis' in window)) { this.setStatus('err','❌ 不支持语音，请用 Chrome/Edge'); return; }
-    this.setStatus('busy','正在加载语音包…');
+    if (!('speechSynthesis' in window)) { this.setStatus('err','❌ Speech not supported. Use Chrome or Edge.'); return; }
+    this.setStatus('busy','Loading voices…');
     this._load();
     window.speechSynthesis.onvoiceschanged = () => this._load();
   },
@@ -268,7 +267,7 @@ const TTS = {
     const all = window.speechSynthesis.getVoices();
     if (!all.length) return;
     this.voice = all.find(v=>v.lang==='en-US'&&v.localService)||all.find(v=>v.lang==='en-US')||all.find(v=>v.lang.startsWith('en-GB'))||all.find(v=>v.lang.startsWith('en'))||null;
-    this.setStatus('ok', `✓ 就绪  语音：${this.voice?this.voice.name:'系统默认'}  点击 ▶ 播放`);
+    this.setStatus('ok', `✓ Ready  Voice: ${this.voice?this.voice.name:'default'}  Click ▶ to play`);
   },
   speak(text) {
     if (!('speechSynthesis' in window)) return;
@@ -279,13 +278,13 @@ const TTS = {
     utt.lang='en-US'; utt.rate=this.rate; utt.pitch=1; utt.volume=1;
     if (this.voice) utt.voice = this.voice;
     const btn = document.getElementById('playBtn');
-    utt.onstart = () => { btn.textContent='⏸'; btn.classList.add('playing'); this.setStatus('busy','🔊 播放中…'); };
-    utt.onend   = () => { btn.textContent='▶'; btn.classList.remove('playing'); this.setStatus('ok','✓ 播放完毕，点击 ▶ 重播'); };
+    utt.onstart = () => { btn.textContent='⏸'; btn.classList.add('playing'); this.setStatus('busy','🔊 Playing…'); };
+    utt.onend   = () => { btn.textContent='▶'; btn.classList.remove('playing'); this.setStatus('ok','✓ Done. Click ▶ to replay.'); };
     utt.onerror = e => {
       if(e.error==='interrupted'||e.error==='canceled') return;
       btn.textContent='▶'; btn.classList.remove('playing');
-      const m={'not-allowed':'❌ 请先点击页面再播放','network':'❌ 网络语音失败，检查网络连接','synthesis-failed':'❌ 合成失败，请刷新页面'};
-      this.setStatus('err', m[e.error]||`❌ 出错(${e.error})，请刷新重试`);
+      const m={'not-allowed':'❌ Click anywhere on the page first, then play.','network':'❌ Network error loading voice.','synthesis-failed':'❌ Synthesis failed. Please refresh.'};
+      this.setStatus('err', m[e.error]||`❌ Error (${e.error}). Please refresh.`);
     };
     try { synth.speak(utt); } catch(ex) { this.setStatus('err','❌ '+ex.message); }
   }
@@ -310,7 +309,7 @@ function toggleChip(key) {
   loadItem();
 }
 
-const COMP_LABELS = { weekday:'星期', date:'日期', year:'年份', time:'时间' };
+const COMP_LABELS = { weekday:'Weekday', date:'Date', year:'Year', time:'Time' };
 function updateHint() {
   const on = Object.keys(components).filter(k=>components[k]).map(k=>COMP_LABELS[k]);
   document.getElementById('hintText').textContent = on.join(' + ');
@@ -471,7 +470,7 @@ function loadItem() {
   const inp = document.getElementById('answerInput');
   inp.value=''; inp.className='answer-input';
   document.getElementById('resultBox').style.display='none';
-  document.getElementById('submitBtn').textContent='✓ 提交答案';
+  document.getElementById('submitBtn').textContent='✓ Submit';
   inp.placeholder = buildPlaceholder();
 
   const h=hist[tab], idx=hIdx[tab];
@@ -485,7 +484,7 @@ function loadItem() {
   document.getElementById('prevBtn').disabled = hIdx[tab]<=0;
   if(tab===1) document.getElementById('sentenceDisplay').innerHTML = item.display||'';
   inp.focus();
-  TTS.setStatus('ok','✓ 新题目已加载，点击 ▶ 播放');
+  TTS.setStatus('ok','✓ New question loaded. Click ▶ to play.');
 }
 
 function prevItem() {
@@ -495,13 +494,13 @@ function prevItem() {
   const inp=document.getElementById('answerInput');
   inp.value=''; inp.className='answer-input';
   document.getElementById('resultBox').style.display='none';
-  document.getElementById('submitBtn').textContent='✓ 提交答案';
+  document.getElementById('submitBtn').textContent='✓ Submit';
   const item=cur();
   document.getElementById('itemIndex').textContent=hIdx[tab]+1;
   document.getElementById('prevBtn').disabled=hIdx[tab]<=0;
   if(tab===1) document.getElementById('sentenceDisplay').innerHTML=item.display||'';
   inp.focus();
-  TTS.setStatus('ok','✓ 已返回上一题，点击 ▶ 播放');
+  TTS.setStatus('ok','✓ Previous question. Click ▶ to play.');
 }
 
 function nextItem(){ loadItem(); }
@@ -518,12 +517,12 @@ function buildResultHtml(val, item) {
   let html = '';
 
   if(item.type==='sentence'){
-    html += `<span class="rl">完整句子</span>${esc(item.sentence)}`;
+    html += `<span class="rl">Full sentence</span>${esc(item.sentence)}`;
   }
 
   // Show per-component breakdown
   const compKeys = ['weekday','date','year','time'];
-  const compLabels = { weekday:'星期', date:'日期', year:'年份', time:'时间' };
+  const compLabels = { weekday:'Weekday', date:'Date', year:'Year', time:'Time' };
   const activeComps = compKeys.filter(k=>components[k]);
 
   if(activeComps.length > 1) {
@@ -537,14 +536,14 @@ function buildResultHtml(val, item) {
       const userPart = userParts[i]||'';
       const partOk = match(userPart, correctPart);
       if(!partOk) allOk=false;
-      html += `<span class="rl">${compLabels[k]} — 你的</span><span class="${partOk?'hi-ok':'hi-wrong'}">${esc(userPart)||'(空)'}</span>`;
-      if(!partOk) html += `<span class="rl">${compLabels[k]} — 正确</span><span class="hi-ok">${esc(correctPart)}</span>`;
+      html += `<span class="rl">${compLabels[k]} — yours</span><span class="${partOk?'hi-ok':'hi-wrong'}">${esc(userPart)||'(empty)'}</span>`;
+      if(!partOk) html += `<span class="rl">${compLabels[k]} — correct</span><span class="hi-ok">${esc(correctPart)}</span>`;
     });
     return { ok: allOk, html };
   } else {
     // Single component
-    html += `<span class="rl">你的答案</span><span class="${ok?'hi-ok':'hi-wrong'}">${esc(val)}</span>`;
-    if(!ok) html += `<span class="rl">正确答案</span><span class="hi-ok">${esc(correct)}</span>`;
+    html += `<span class="rl">Your answer</span><span class="${ok?'hi-ok':'hi-wrong'}">${esc(val)}</span>`;
+    if(!ok) html += `<span class="rl">Correct answer</span><span class="hi-ok">${esc(correct)}</span>`;
     return { ok, html };
   }
 }
@@ -580,9 +579,9 @@ function submitAnswer() {
   box.className='result-box '+(ok?'correct':'wrong');
   box.style.display='block';
   document.getElementById('resultTitle').className='result-title '+(ok?'correct':'wrong');
-  document.getElementById('resultTitle').textContent=ok?'✅ 正确！':'❌ 错误';
+  document.getElementById('resultTitle').textContent=ok?'✅ Correct!':'❌ Wrong';
   document.getElementById('resultBody').innerHTML=html;
-  document.getElementById('submitBtn').textContent='→ 下一题';
+  document.getElementById('submitBtn').textContent='→ Next';
 }
 
 document.getElementById('answerInput').addEventListener('input', ()=>{
@@ -597,7 +596,7 @@ document.getElementById('answerInput').addEventListener('input', ()=>{
   answered=false;
   document.getElementById('answerInput').className='answer-input';
   document.getElementById('resultBox').style.display='none';
-  document.getElementById('submitBtn').textContent='✓ 提交答案';
+  document.getElementById('submitBtn').textContent='✓ Submit';
   if(tab===1){ const item=cur(); if(item) document.getElementById('sentenceDisplay').innerHTML=item.display||''; }
 });
 
