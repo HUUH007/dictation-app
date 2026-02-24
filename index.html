@@ -172,6 +172,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 
 <header>
   <h1>🎧 Date &amp; Time Dictation</h1>
+  <p>Date &amp; Time Dictation Practice</p>
 </header>
 
 <div class="tts-bar">
@@ -189,8 +190,8 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 <div class="selector-panel">
   <div class="selector-title">Include in dictation (multi-select)</div>
   <div class="chips">
-    <button class="chip" id="chip-weekday" onclick="toggleChip('weekday')">🌟 Weekday</button>
-    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 Date</button>
+    <button class="chip" id="chip-weekday" onclick="toggleChip('weekday')">📅 Weekday</button>
+    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 Date (M+D)</button>
     <button class="chip" id="chip-year" onclick="toggleChip('year')">📆 Year</button>
     <button class="chip on" id="chip-time" onclick="toggleChip('time')">🕐 Time</button>
   </div>
@@ -230,7 +231,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
   <div class="btn-row">
     <button class="btn btn-nav" id="prevBtn" onclick="prevItem()" disabled>◀</button>
     <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">✓ Submit</button>
-    <button class="btn btn-secondary" onclick="nextItem()">Skip</button>
+    <button class="btn btn-secondary" onclick="skipItem()">Skip</button>
     <button class="btn btn-nav" onclick="nextItem()">▶</button>
   </div>
 
@@ -623,6 +624,62 @@ function prevItem() {
 }
 
 function nextItem(){ loadItem(); }
+
+function skipItem() {
+  const item = cur();
+  if (!item) { loadItem(); return; }
+
+  // Get the correct answer text
+  const correct = item.type === 'sentence' ? item.phraseText : item.text;
+
+  // Fill input with correct answer
+  const inp = document.getElementById('answerInput');
+  inp.value = correct;
+  inp.className = 'answer-input wrong';
+
+  // Reveal sentence blank if needed
+  if (item.type === 'sentence') {
+    const rev = item.display.replace(
+      '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>',
+      `<span class="revealed">${esc(item.phraseText)}</span>`
+    );
+    document.getElementById('sentenceDisplay').innerHTML = rev;
+  }
+
+  // Build result HTML showing the correct answer
+  let html = '';
+  if (item.type === 'sentence') {
+    html += `<span class="rl">Full sentence</span>${esc(item.sentence)}`;
+  }
+  const compKeys = ['weekday','date','year','time'];
+  const compLabels = { weekday:'Weekday', date:'Date', year:'Year', time:'Time' };
+  const activeComps = compKeys.filter(k => components[k]);
+  if (activeComps.length > 1) {
+    activeComps.forEach(k => {
+      html += `<span class="rl">${compLabels[k]} — correct</span><span class="hi-ok">${esc(item.answers[k]||'')}</span>`;
+    });
+  } else {
+    html += `<span class="rl">Correct answer</span><span class="hi-ok">${esc(correct)}</span>`;
+  }
+
+  // Show result box as skipped (wrong, no stats counted)
+  answered = true;
+  lastResultOk = false;
+  stats.total++; stats.wrong++;
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sCorrect').textContent = stats.correct;
+  document.getElementById('sWrong').textContent = stats.wrong;
+  document.getElementById('sRate').textContent = Math.round(stats.correct / stats.total * 100) + '%';
+  document.getElementById('totalDone').textContent = stats.total;
+
+  const box = document.getElementById('resultBox');
+  box.className = 'result-box wrong';
+  box.style.display = 'block';
+  document.getElementById('resultTitle').className = 'result-title wrong';
+  document.getElementById('resultTitle').textContent = '⏭ Skipped';
+  document.getElementById('resultBody').innerHTML = html;
+  document.getElementById('submitBtn').textContent = '→ Next';
+}
 function handlePlay(){ const item=cur(); if(item) TTS.speak(item.speak); }
 function updateSpeed(){ TTS.rate=parseFloat(document.getElementById('speedRange').value); document.getElementById('speedVal').textContent=TTS.rate.toFixed(2)+'×'; }
 
