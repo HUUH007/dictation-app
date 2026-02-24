@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英文日期时间听写</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f14;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2e2e40;
+    --accent: #7c6af7;
+    --accent2: #f7a06a;
+    --text: #e8e6f0;
+    --text-muted: #7a7890;
+    --correct: #4ade80;
+    --wrong: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(124,106,247,0.08) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 80%, rgba(106,247,192,0.05) 0%, transparent 50%);
+  }
+  header { text-align: center; margin-bottom: 20px; }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: var(--text-muted); font-size: 0.82rem; margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+  .tts-bar {
+    width: 100%;
+    max-width: 680px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.76rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tts-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; flex-shrink: 0; transition: background 0.3s; }
+  .tts-dot.ok { background: var(--correct); box-shadow: 0 0 6px var(--correct); }
+  .tts-dot.err { background: var(--wrong); box-shadow: 0 0 6px var(--wrong); }
+  .tts-dot.busy { background: var(--accent2); animation: blink 0.8s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  #ttsMsg { color: var(--text-muted); flex: 1; line-height: 1.4; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    background: var(--surface);
+    padding: 5px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 680px;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 6px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.22s;
+    text-align: center;
+  }
+  .tab.active { background: var(--accent); color: white; box-shadow: 0 4px 14px rgba(124,106,247,0.4); }
+  .tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  .card {
+    width: 100%;
+    max-width: 680px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .counter { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted); text-align: right; margin-bottom: 16px; }
+  .counter span { color: var(--accent); }
+
+  .audio-section {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 26px;
+    background: var(--surface2);
+    border-radius: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+  }
+  .play-btn {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), #5b52d4);
+    color: white;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 6px 20px rgba(124,106,247,0.4);
+    position: relative;
+    user-select: none;
+  }
+  .play-btn:hover { transform: scale(1.08); }
+  .play-btn:active { transform: scale(0.95); }
+  .play-btn.playing::after {
+    content: '';
+    position: absolute; inset: -5px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: pulse-ring 1.1s ease-out infinite;
+  }
+  @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(1.55);opacity:0} }
+
+  .audio-info { flex: 1; }
+  .audio-info p { font-size: 0.86rem; color: var(--text-muted); line-height: 1.5; }
+  .shortcut-row {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.68rem;
+    color: var(--accent);
+  }
+  .speed-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .speed-row label { font-size: 0.72rem; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .speed-row input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+  .speed-val { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--accent); min-width: 34px; }
+
+  .sentence-display {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 18px;
+    min-height: 54px;
+    display: none;
+  }
+  .blank { display: inline-block; min-width: 80px; border-bottom: 2px solid var(--accent); margin: 0 3px; vertical-align: bottom; }
+  .revealed { color: var(--accent2); font-weight: 700; }
+
+  .input-section { margin-bottom: 18px; }
+  .input-label {
+    display: block;
+    font-size: 0.73rem; font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .answer-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .answer-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,106,247,0.15); }
+  .answer-input.correct { border-color: var(--correct); background: rgba(74,222,128,0.07); }
+  .answer-input.wrong { border-color: var(--wrong); background: rgba(248,113,113,0.07); }
+
+  .btn-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .btn { padding: 12px 18px; border-radius: 11px; border: none; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: all 0.18s; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #5b52d4); color: white; flex: 1; box-shadow: 0 4px 14px rgba(124,106,247,0.3); }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-nav { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); padding: 12px 14px; }
+  .btn-nav:hover { color: var(--text); background: var(--border); }
+  .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .result-box { display: none; border-radius: 14px; padding: 16px 20px; margin-top: 12px; animation: slide-in 0.25s ease; }
+  @keyframes slide-in { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .result-box.correct { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.22); }
+  .result-box.wrong { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.22); }
+  .result-title { font-weight: 700; font-size: 1rem; margin-bottom: 10px; }
+  .result-title.correct { color: var(--correct); }
+  .result-title.wrong { color: var(--wrong); }
+  .result-body { font-family: 'DM Mono', monospace; font-size: 0.86rem; color: var(--text); line-height: 1.9; }
+  .rl { color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-top: 8px; }
+  .rl:first-child { margin-top: 0; }
+  .hi-wrong { color: var(--wrong); text-decoration: underline wavy; }
+  .hi-ok { color: var(--correct); }
+
+  .stats { display: flex; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .stat { flex: 1; text-align: center; background: var(--surface2); border-radius: 10px; padding: 12px 4px; border: 1px solid var(--border); }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; line-height: 1; margin-bottom: 3px; }
+  .stat-label { font-size: 0.66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  @media(max-width:500px){
+    .card{padding:18px 12px;}
+    .audio-section{flex-direction:column;align-items:flex-start;}
+    .btn-row{flex-wrap:wrap;}
+    .btn-primary{flex:none;width:100%;order:0;}
+    .btn-nav{order:1;}
+    .btn-secondary{order:2;flex:1;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎧 英文日期时间听写</h1>
+  <p>Date &amp; Time Dictation Practice</p>
+</header>
+
+<div class="tts-bar">
+  <div class="tts-dot" id="ttsDot"></div>
+  <div id="ttsMsg">正在初始化语音引擎，请稍候…</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(0)">📅 日期</button>
+  <button class="tab" onclick="switchTab(1)">🕐 时间</button>
+  <button class="tab" onclick="switchTab(2)">🗣️ 对话</button>
+</div>
+
+<div class="card">
+  <div class="counter">题目 <span id="itemIndex">1</span> &nbsp;|&nbsp; 已完成 <span id="totalDone">0</span> 题</div>
+
+  <div class="audio-section">
+    <button class="play-btn" id="playBtn" onclick="handlePlay()">▶</button>
+    <div class="audio-info">
+      <p>点击 ▶ 播放音频，填写你听到的内容后按提交。</p>
+      <div class="shortcut-row">
+        <span><kbd>Ctrl</kbd> 重播</span>
+        <span><kbd>Enter</kbd> 提交/下一题</span>
+        <span><kbd>←</kbd> 上一题</span>
+        <span><kbd>→</kbd> 下一题</span>
+      </div>
+      <div class="speed-row">
+        <label>语速</label>
+        <input type="range" id="speedRange" min="0.5" max="1.5" step="0.05" value="0.85" oninput="updateSpeed()">
+        <span class="speed-val" id="speedVal">0.85×</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sentence-display" id="sentenceDisplay"></div>
+
+  <div class="input-section">
+    <label class="input-label" id="inputLabel">输入你听到的日期</label>
+    <input class="answer-input" type="text" id="answerInput"
+      placeholder="e.g. Monday, March 15th"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-nav" id="prevBtn" onclick="prevItem()" disabled title="← 上一题">◀</button>
+    <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">✓ 提交答案</button>
+    <button class="btn btn-secondary" onclick="nextItem()">跳过</button>
+    <button class="btn btn-nav" onclick="nextItem()" title="→ 下一题">▶</button>
+  </div>
+
+  <div class="result-box" id="resultBox">
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-body" id="resultBody"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="sTotal" style="color:var(--accent)">0</div><div class="stat-label">总计</div></div>
+    <div class="stat"><div class="stat-num" id="sCorrect" style="color:var(--correct)">0</div><div class="stat-label">正确</div></div>
+    <div class="stat"><div class="stat-num" id="sWrong" style="color:var(--wrong)">0</div><div class="stat-label">错误</div></div>
+    <div class="stat"><div class="stat-num" id="sRate" style="color:var(--accent2)">—</div><div class="stat-label">正确率</div></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// TTS ENGINE — Chrome-proof version
+// ══════════════════════════════════════════
+const TTS = {
+  voice: null,
+  rate: 0.85,
+  _pendingText: null,
+
+  setStatus(type, msg) {
+    const dot = document.getElementById('ttsDot');
+    const txt = document.getElementById('ttsMsg');
+    dot.className = 'tts-dot ' + type;
+    txt.textContent = msg;
+  },
+
+  init() {
+    if (!('speechSynthesis' in window)) {
+      this.setStatus('err', '❌ 浏览器不支持语音。请使用 Chrome 或 Edge。');
+      return;
+    }
+    this.setStatus('busy', '正在加载语音包…');
+    this._loadVoices();
+    window.speechSynthesis.onvoiceschanged = () => this._loadVoices();
+  },
+
+  _loadVoices() {
+    const all = window.speechSynthesis.getVoices();
+    if (!all.length) return;
+    this.voice =
+      all.find(v => v.lang === 'en-US' && v.localService) ||
+      all.find(v => v.lang === 'en-US') ||
+      all.find(v => v.lang.startsWith('en-GB')) ||
+      all.find(v => v.lang.startsWith('en')) ||
+      null;
+    const name = this.voice ? this.voice.name : '(无英文语音)';
+    this.setStatus('ok', `✓ 就绪  语音：${name}   协议：${location.protocol}  点击 ▶ 开始`);
+  },
+
+  speak(text) {
+    if (!('speechSynthesis' in window)) {
+      this.setStatus('err', '❌ 浏览器不支持语音合成'); return;
+    }
+    const synth = window.speechSynthesis;
+
+    // Always cancel first, then speak immediately (same gesture frame)
+    // Do NOT use setTimeout — Chrome treats that as a new (non-gesture) context
+    synth.cancel();
+
+    // Re-fetch voices every time in case they weren't ready before
+    const all = synth.getVoices();
+    if (all.length && !this.voice) {
+      this.voice =
+        all.find(v => v.lang === 'en-US' && v.localService) ||
+        all.find(v => v.lang === 'en-US') ||
+        all.find(v => v.lang.startsWith('en-GB')) ||
+        all.find(v => v.lang.startsWith('en')) || null;
+    }
+
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'en-US';
+    utt.rate = this.rate;
+    utt.pitch = 1;
+    utt.volume = 1;
+    if (this.voice) utt.voice = this.voice;
+
+    const btn = document.getElementById('playBtn');
+    utt.onstart = () => {
+      btn.textContent = '⏸'; btn.classList.add('playing');
+      this.setStatus('busy', `🔊 播放中…`);
+    };
+    utt.onend = () => {
+      btn.textContent = '▶'; btn.classList.remove('playing');
+      this.setStatus('ok', '✓ 播放完毕，点击 ▶ 重播');
+    };
+    utt.onerror = e => {
+      // 'interrupted' always fires after cancel() — safe to ignore
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
+      btn.textContent = '▶'; btn.classList.remove('playing');
+      const fixes = {
+        'not-allowed':           '❌ not-allowed：Chrome 安全限制。请尝试：把文件放到桌面，右键→打开方式→Google Chrome。',
+        'network':               '❌ network：语音包网络加载失败。请检查网络，或换 Edge 浏览器试试。',
+        'synthesis-unavailable': '❌ 系统没有英文语音包。请到系统设置安装"英语(美国)"语音。',
+        'synthesis-failed':      '❌ 合成失败。请按 F5 刷新，或重启 Chrome。',
+        'audio-busy':            '❌ 音频设备繁忙，请关闭其他音频程序后重试。',
+      };
+      this.setStatus('err', fixes[e.error] || `❌ 出错(${e.error})。请刷新页面重试。`);
+    };
+    try {
+      synth.speak(utt);
+      this.setStatus('ok', `⏳ 正在准备播放…`);
+    } catch(ex) {
+      this.setStatus('err', '❌ speak()异常：' + ex.message);
+    }
+  }
+};
+
+setInterval(() => {
+  try { if (window.speechSynthesis && !window.speechSynthesis.speaking) window.speechSynthesis.resume(); }
+  catch(e) {}
+}, 5000);
+
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function ordinal(n) {
+  if(n===1||n===21||n===31) return n+'st';
+  if(n===2||n===22) return n+'nd';
+  if(n===3||n===23) return n+'rd';
+  return n+'th';
+}
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+const NW = ['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty',
+  'twenty-one','twenty-two','twenty-three','twenty-four','twenty-five','twenty-six','twenty-seven',
+  'twenty-eight','twenty-nine','thirty','thirty-one','thirty-two','thirty-three','thirty-four',
+  'thirty-five','thirty-six','thirty-seven','thirty-eight','thirty-nine','forty','forty-one',
+  'forty-two','forty-three','forty-four','forty-five','forty-six','forty-seven','forty-eight',
+  'forty-nine','fifty','fifty-one','fifty-two','fifty-three','fifty-four','fifty-five','fifty-six',
+  'fifty-seven','fifty-eight','fifty-nine'];
+function nw(n){ return NW[n]||String(n); }
+
+function genDate() {
+  const m = pick(MONTHS), d = rand(1,28), day = pick(DAYS), ord = ordinal(d);
+  const text = pick([
+    `${day}, ${m} ${ord}`,
+    `${m} ${ord}, ${day}`,
+    `${day}, the ${ord} of ${m}`,
+    `${m} the ${ord}`,
+    `the ${ord} of ${m}`,
+    `the ${ord} of ${m}, ${day}`,
+  ]);
+  return { type:'date', text };
+}
+
+function genTime() {
+  const h = rand(1,12);
+  const r = Math.random();
+  let text;
+  if(r < 0.14) {
+    const ctx = pick(h<=11 ? ['in the morning','',''] : ['in the afternoon','in the evening','']);
+    text = `${nw(h)} o'clock${ctx?' '+ctx:''}`;
+  } else if(r < 0.28) {
+    text = pick([`half past ${nw(h)}`, `${nw(h)} thirty`]);
+  } else if(r < 0.42) {
+    const next = h===12?1:h+1;
+    text = Math.random()>0.5 ? `a quarter to ${nw(next)}` : `a quarter past ${nw(h)}`;
+  } else {
+    const m = rand(1,59), next = h===12?1:h+1;
+    if(m<30) text = pick([`${nw(m)} past ${nw(h)}`, `${nw(h)} ${nw(m)}`]);
+    else if(m===30) text = `half past ${nw(h)}`;
+    else text = pick([`${nw(60-m)} to ${nw(next)}`, `${nw(h)} ${nw(m)}`]);
+  }
+  return { type:'time', text };
+}
+
+const TMPLS = [
+  { tpl:"Let's meet on DATE.", fill:'date' },
+  { tpl:"The party starts at TIME.", fill:'time' },
+  { tpl:"Can you come at TIME?", fill:'time' },
+  { tpl:"The shop opens at TIME.", fill:'time' },
+  { tpl:"I have an appointment on DATE at TIME.", fill:'both' },
+  { tpl:"The bus leaves at TIME.", fill:'time' },
+  { tpl:"She was born on DATE.", fill:'date' },
+  { tpl:"The meeting is on DATE at TIME.", fill:'both' },
+  { tpl:"School starts at TIME on DATE.", fill:'both' },
+  { tpl:"The movie is at TIME on DATE.", fill:'both' },
+  { tpl:"Please call me at TIME on DATE.", fill:'both' },
+  { tpl:"We leave at TIME.", fill:'time' },
+  { tpl:"The class is on DATE at TIME.", fill:'both' },
+  { tpl:"Dinner is at TIME.", fill:'time' },
+  { tpl:"The store closes at TIME on DATE.", fill:'both' },
+  { tpl:"The flight is on DATE at TIME.", fill:'both' },
+  { tpl:"I was born on DATE.", fill:'date' },
+  { tpl:"The game starts at TIME.", fill:'time' },
+  { tpl:"Can we meet on DATE?", fill:'date' },
+  { tpl:"The train arrives at TIME on DATE.", fill:'both' },
+];
+
+function genDialogue() {
+  const { tpl, fill } = pick(TMPLS);
+  const di = (fill==='date'||fill==='both') ? genDate() : null;
+  const ti = (fill==='time'||fill==='both') ? genTime() : null;
+  let sentence = tpl;
+  if(di) sentence = sentence.replace('DATE', di.text);
+  if(ti) sentence = sentence.replace('TIME', ti.text);
+  let display = tpl;
+  if(di) display = display.replace('DATE', '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>');
+  if(ti) display = display.replace('TIME', '<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>');
+  return { type:'dialogue', speak:sentence, sentence, display, fill, dateText:di?.text||null, timeText:ti?.text||null };
+}
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let tab = 0;
+const hist = [[], [], []];
+const hIdx = [-1, -1, -1];
+const stats = { total:0, correct:0, wrong:0 };
+let answered = false;
+let lastResultOk = false; // track last result for undo when user retypes
+
+function cur() { return hist[tab][hIdx[tab]]; }
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function norm(s){
+  return s.toLowerCase()
+    .replace(/['''`]/g,"'")
+    .replace(/[^a-z0-9'\-\s]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+function match(user, correct){
+  const u = norm(user), c = norm(correct);
+  if(u===c) return true;
+  // All key tokens must be present
+  const ct = c.split(/\s+/).filter(Boolean);
+  const ut = u.split(/\s+/).filter(Boolean);
+  return ct.every(t => ut.includes(t));
+}
+
+// ══════════════════════════════════════════
+// TAB
+// ══════════════════════════════════════════
+function switchTab(t) {
+  tab = t;
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', i===t));
+  const labels = ['输入你听到的日期','输入你听到的时间','填写时间和日期（用逗号分隔，先时间后日期）'];
+  const placeholders = ['e.g. Monday, March 15th','e.g. half past three','e.g. half past three, Monday March 15th'];
+  document.getElementById('inputLabel').textContent = labels[t];
+  document.getElementById('answerInput').placeholder = placeholders[t];
+  document.getElementById('sentenceDisplay').style.display = t===2 ? 'block' : 'none';
+  loadItem();
+}
+
+// ══════════════════════════════════════════
+// ITEMS
+// ══════════════════════════════════════════
+function loadItem() {
+  answered = false;
+  const inp = document.getElementById('answerInput');
+  inp.value = '';
+  inp.className = 'answer-input';
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('submitBtn').textContent = '✓ 提交答案';
+
+  const h = hist[tab], idx = hIdx[tab];
+  let item;
+  if(idx < h.length-1) {
+    hIdx[tab]++;
+    item = h[hIdx[tab]];
+  } else {
+    item = tab===0 ? genDate() : tab===1 ? genTime() : genDialogue();
+    h.push(item);
+    hIdx[tab] = h.length-1;
+  }
+
+  document.getElementById('itemIndex').textContent = hIdx[tab]+1;
+  document.getElementById('prevBtn').disabled = hIdx[tab]<=0;
+
+  if(tab===2) document.getElementById('sentenceDisplay').innerHTML = item.display||'';
+
+  inp.focus();
+  TTS.setStatus('ok', '✓ 新题目已加载，点击 ▶ 播放');
+}
+
+function prevItem() {
+  if(hIdx[tab]<=0) return;
+  hIdx[tab]--;
+  answered = false;
+  const inp = document.getElementById('answerInput');
+  inp.value = ''; inp.className = 'answer-input';
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('submitBtn').textContent = '✓ 提交答案';
+  const item = cur();
+  document.getElementById('itemIndex').textContent = hIdx[tab]+1;
+  document.getElementById('prevBtn').disabled = hIdx[tab]<=0;
+  if(tab===2) document.getElementById('sentenceDisplay').innerHTML = item.display||'';
+  inp.focus();
+  TTS.setStatus('ok', '✓ 已返回上一题，点击 ▶ 播放');
+}
+
+function nextItem() { loadItem(); }
+
+function handlePlay() {
+  const item = cur();
+  if(item) TTS.speak(item.speak||item.text);
+}
+
+function updateSpeed() {
+  TTS.rate = parseFloat(document.getElementById('speedRange').value);
+  document.getElementById('speedVal').textContent = TTS.rate.toFixed(2)+'×';
+}
+
+// ══════════════════════════════════════════
+// SUBMIT
+// ══════════════════════════════════════════
+function showResult(val) {
+  const item = cur();
+  let ok = false, html = '';
+
+  if(item.type!=='dialogue') {
+    ok = match(val, item.text);
+    html = `<span class="rl">你的答案</span><span class="${ok?'hi-ok':'hi-wrong'}">${esc(val)}</span>`;
+    if(!ok) html += `<span class="rl">正确答案</span><span class="hi-ok">${esc(item.text)}</span>`;
+  } else {
+    if(item.fill==='both') {
+      const parts = val.split(',').map(s=>s.trim());
+      const uTime = parts[0]||'', uDate = parts[1]||'';
+      const tOk = match(uTime, item.timeText||''), dOk = match(uDate, item.dateText||'');
+      ok = tOk && dOk;
+      html = `<span class="rl">完整句子</span>${esc(item.sentence)}`;
+      html += `<span class="rl">时间 — 你的</span><span class="${tOk?'hi-ok':'hi-wrong'}">${esc(uTime)||'(空)'}</span>`;
+      if(!tOk) html += `<span class="rl">时间 — 正确</span><span class="hi-ok">${esc(item.timeText)}</span>`;
+      html += `<span class="rl">日期 — 你的</span><span class="${dOk?'hi-ok':'hi-wrong'}">${esc(uDate)||'(空)'}</span>`;
+      if(!dOk) html += `<span class="rl">日期 — 正确</span><span class="hi-ok">${esc(item.dateText)}</span>`;
+    } else {
+      const correct = item.fill==='date' ? item.dateText : item.timeText;
+      ok = match(val, correct||'');
+      html = `<span class="rl">完整句子</span>${esc(item.sentence)}`;
+      html += `<span class="rl">你的答案</span><span class="${ok?'hi-ok':'hi-wrong'}">${esc(val)}</span>`;
+      if(!ok) html += `<span class="rl">正确答案</span><span class="hi-ok">${esc(correct)}</span>`;
+    }
+    // reveal blanks
+    let rev = item.display;
+    if(item.timeText) rev = rev.replace('<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>', `<span class="revealed">${esc(item.timeText)}</span>`);
+    if(item.dateText) rev = rev.replace('<span class="blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>', `<span class="revealed">${esc(item.dateText)}</span>`);
+    document.getElementById('sentenceDisplay').innerHTML = rev;
+  }
+
+  return { ok, html };
+}
+
+function submitAnswer() {
+  const inp = document.getElementById('answerInput');
+
+  // State: answered=true means result is showing → Enter goes to next
+  if(answered) { nextItem(); return; }
+
+  const val = inp.value.trim();
+  if(!val) { inp.focus(); return; }
+
+  const { ok, html } = showResult(val);
+  answered = true;
+  lastResultOk = ok;
+
+  stats.total++; if(ok) stats.correct++; else stats.wrong++;
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sCorrect').textContent = stats.correct;
+  document.getElementById('sWrong').textContent = stats.wrong;
+  document.getElementById('sRate').textContent = Math.round(stats.correct/stats.total*100)+'%';
+  document.getElementById('totalDone').textContent = stats.total;
+
+  inp.classList.add(ok?'correct':'wrong');
+  const box = document.getElementById('resultBox');
+  box.className = 'result-box '+(ok?'correct':'wrong');
+  box.style.display = 'block';
+  document.getElementById('resultTitle').className = 'result-title '+(ok?'correct':'wrong');
+  document.getElementById('resultTitle').textContent = ok ? '✅ 正确！' : '❌ 错误';
+  document.getElementById('resultBody').innerHTML = html;
+  document.getElementById('submitBtn').textContent = '→ 下一题';
+}
+
+// Listen for typing in input — if result is showing, hide it and let user retry
+document.getElementById('answerInput').addEventListener('input', () => {
+  if(!answered) return;
+  // User started retyping → undo last stat, hide result, reset state
+  stats.total--;
+  if(lastResultOk) stats.correct--; else stats.wrong--;
+  stats.total = Math.max(0, stats.total);
+  stats.correct = Math.max(0, stats.correct);
+  stats.wrong = Math.max(0, stats.wrong);
+  document.getElementById('sTotal').textContent = stats.total;
+  document.getElementById('sCorrect').textContent = stats.correct;
+  document.getElementById('sWrong').textContent = stats.wrong;
+  document.getElementById('sRate').textContent = stats.total > 0 ? Math.round(stats.correct/stats.total*100)+'%' : '—';
+  document.getElementById('totalDone').textContent = stats.total;
+
+  answered = false;
+  const inp = document.getElementById('answerInput');
+  inp.className = 'answer-input';
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('submitBtn').textContent = '✓ 提交答案';
+  if(tab===2) {
+    const item = cur();
+    if(item) document.getElementById('sentenceDisplay').innerHTML = item.display||'';
+  }
+});
+
+// ══════════════════════════════════════════
+// KEYBOARD
+// ══════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  const inInput = document.activeElement===document.getElementById('answerInput');
+  if(e.ctrlKey && !e.shiftKey && !e.altKey && e.key!=='z' && e.key!=='y' && e.key!=='a' && e.key!=='c' && e.key!=='v' && e.key!=='x') {
+    e.preventDefault(); handlePlay(); return;
+  }
+  if(e.key==='Enter'){ e.preventDefault(); submitAnswer(); return; }
+  if(!inInput){
+    if(e.key==='ArrowLeft'){ e.preventDefault(); prevItem(); }
+    if(e.key==='ArrowRight'){ e.preventDefault(); nextItem(); }
+  }
+});
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('load', () => {
+  TTS.init();
+  loadItem();
+});
+</script>
+</body>
+</html>
