@@ -172,6 +172,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 
 <header>
   <h1>🎧 Date &amp; Time Dictation</h1>
+  <p>Date &amp; Time Dictation Practice</p>
 </header>
 
 <div class="tts-bar">
@@ -190,7 +191,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
   <div class="selector-title">Include in dictation (multi-select)</div>
   <div class="chips">
     <button class="chip" id="chip-weekday" onclick="toggleChip('weekday')">📅 Weekday</button>
-    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 Date</button>
+    <button class="chip on" id="chip-date" onclick="toggleChip('date')">🗓 Date (M+D)</button>
     <button class="chip" id="chip-year" onclick="toggleChip('year')">📆 Year</button>
     <button class="chip on" id="chip-time" onclick="toggleChip('time')">🕐 Time</button>
   </div>
@@ -450,10 +451,12 @@ function timeToWords(str) {
   const m = str.match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return [];
   let h = parseInt(m[1]), min = parseInt(m[2]);
-  // 24h → 12h
   if (h > 12) h -= 12;
   if (h === 0) h = 12;
   const candidates = [];
+  // Always include the "H MM" literal form
+  if (min > 0) candidates.push(`${_nw(h)} ${_nw(min)}`);
+  // Natural spoken forms
   if (min === 0) {
     candidates.push(`${_nw(h)} o clock`);
     candidates.push(`${_nw(h)} oclock`);
@@ -469,12 +472,10 @@ function timeToWords(str) {
     candidates.push(`quarter to ${_nw(next)}`);
   } else if (min < 30) {
     candidates.push(`${_nw(min)} past ${_nw(h)}`);
-    candidates.push(`${_nw(h)} ${_nw(min)}`);
   } else {
     const rem = 60 - min;
     const next = h === 12 ? 1 : h + 1;
     candidates.push(`${_nw(rem)} to ${_nw(next)}`);
-    candidates.push(`${_nw(h)} ${_nw(min)}`);
   }
   return candidates;
 }
@@ -523,19 +524,40 @@ function expandNumerics(s) {
 
 function match(user, correct) {
   const c = norm(correct);
-  // Try raw user input first
-  const u = norm(user);
-  if (u === c) return true;
+
+  // Generate all possible word-form expansions of user input and test each
+  const candidates = new Set();
+  candidates.add(norm(user));
+  candidates.add(norm(expandNumerics(user)));
+
+  // Also try replacing each time/year token individually and collect all combos
+  // For time: generate ALL word candidates and try each substitution
+  const timeMatches = [...user.matchAll(/\b(\d{1,2}:\d{2})\b/g)];
+  const yearMatches = [...user.matchAll(/\b(1[0-9]{3}|20[0-9]{2})\b/g)];
+  const ampmMatches = [...user.matchAll(/\b(\d{1,2})\s*(am|pm)\b/gi)];
+
+  timeMatches.forEach(m => {
+    const allWords = timeToWords(m[1]);
+    allWords.forEach(w => {
+      candidates.add(norm(user.replace(m[1], w)));
+    });
+  });
+  yearMatches.forEach(m => {
+    const allWords = yearToWords(parseInt(m[1]));
+    allWords.forEach(w => {
+      candidates.add(norm(user.replace(m[1], w)));
+    });
+  });
+  ampmMatches.forEach(m => {
+    candidates.add(norm(user.replace(m[0], `${_nw(parseInt(m[1]))} o clock`)));
+  });
+
   const ct = c.split(/\s+/).filter(Boolean);
-  const ut = u.split(/\s+/).filter(Boolean);
-  if (ct.every(t => ut.includes(t))) return true;
-
-  // Try after expanding numerics in user input
-  const uExp = norm(expandNumerics(user));
-  if (uExp === c) return true;
-  const utExp = uExp.split(/\s+/).filter(Boolean);
-  if (ct.every(t => utExp.includes(t))) return true;
-
+  for (const u of candidates) {
+    if (u === c) return true;
+    const ut = u.split(/\s+/).filter(Boolean);
+    if (ct.every(t => ut.includes(t))) return true;
+  }
   return false;
 }
 
