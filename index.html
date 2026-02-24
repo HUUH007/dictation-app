@@ -172,6 +172,7 @@ kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;p
 
 <header>
   <h1>🎧 Date &amp; Time Dictation</h1>
+  <p>Date &amp; Time Dictation Practice</p>
 </header>
 
 <div class="tts-bar">
@@ -433,12 +434,110 @@ function norm(s){
     .replace(/[^a-z0-9'\-\s]/g,' ')
     .replace(/\s+/g,' ').trim();
 }
-function match(user, correct){
-  const u=norm(user), c=norm(correct);
-  if(u===c) return true;
-  const ct=c.split(/\s+/).filter(Boolean);
-  const ut=u.split(/\s+/).filter(Boolean);
-  return ct.every(t=>ut.includes(t));
+
+// Convert numeric input to spoken English words so "3:30" matches "half past three" etc.
+const _NW=['zero','one','two','three','four','five','six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty',
+  'twenty-one','twenty-two','twenty-three','twenty-four','twenty-five','twenty-six','twenty-seven',
+  'twenty-eight','twenty-nine','thirty','thirty-one','thirty-two','thirty-three','thirty-four',
+  'thirty-five','thirty-six','thirty-seven','thirty-eight','thirty-nine','forty','forty-one',
+  'forty-two','forty-three','forty-four','forty-five','forty-six','forty-seven','forty-eight',
+  'forty-nine','fifty','fifty-one','fifty-two','fifty-three','fifty-four','fifty-five','fifty-six',
+  'fifty-seven','fifty-eight','fifty-nine'];
+function _nw(n){ return _NW[n]||String(n); }
+
+// Convert a time string like "3:30", "3:00", "15:45" → word equivalents (returns array of candidates)
+function timeToWords(str) {
+  const m = str.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return [];
+  let h = parseInt(m[1]), min = parseInt(m[2]);
+  // 24h → 12h
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  const candidates = [];
+  if (min === 0) {
+    candidates.push(`${_nw(h)} o clock`);
+    candidates.push(`${_nw(h)} oclock`);
+  } else if (min === 30) {
+    candidates.push(`half past ${_nw(h)}`);
+    candidates.push(`${_nw(h)} thirty`);
+  } else if (min === 15) {
+    candidates.push(`a quarter past ${_nw(h)}`);
+    candidates.push(`quarter past ${_nw(h)}`);
+  } else if (min === 45) {
+    const next = h === 12 ? 1 : h + 1;
+    candidates.push(`a quarter to ${_nw(next)}`);
+    candidates.push(`quarter to ${_nw(next)}`);
+  } else if (min < 30) {
+    candidates.push(`${_nw(min)} past ${_nw(h)}`);
+    candidates.push(`${_nw(h)} ${_nw(min)}`);
+  } else {
+    const rem = 60 - min;
+    const next = h === 12 ? 1 : h + 1;
+    candidates.push(`${_nw(rem)} to ${_nw(next)}`);
+    candidates.push(`${_nw(h)} ${_nw(min)}`);
+  }
+  return candidates;
+}
+
+// Convert a year number like 1984, 2024 → word equivalents
+function yearToWords(y) {
+  const candidates = [];
+  if (y >= 2000 && y <= 2009) {
+    const r = y - 2000;
+    candidates.push(r === 0 ? 'two thousand' : `two thousand and ${_nw(r)}`);
+    candidates.push(r === 0 ? 'two thousand' : `two thousand ${_nw(r)}`);
+  } else if (y >= 2010 && y <= 2099) {
+    const lo = y - 2000;
+    candidates.push(`twenty ${_nw(lo)}`);
+  } else if (y >= 1100 && y <= 1999) {
+    const hi = Math.floor(y / 100);
+    const lo = y % 100;
+    const hiWords = {11:'eleven',12:'twelve',13:'thirteen',14:'fourteen',15:'fifteen',
+                     16:'sixteen',17:'seventeen',18:'eighteen',19:'nineteen',20:'twenty',10:'ten'};
+    const hiW = hiWords[hi] || _nw(hi);
+    if (lo === 0) candidates.push(`${hiW} hundred`);
+    else if (lo < 10) { candidates.push(`${hiW} oh ${_nw(lo)}`); candidates.push(`${hiW} ${_nw(lo)}`); }
+    else candidates.push(`${hiW} ${_nw(lo)}`);
+  }
+  return candidates;
+}
+
+// Expand numeric expressions in a user input string to word form
+function expandNumerics(s) {
+  let result = s;
+  // Time: 3:30, 11:45 etc
+  result = result.replace(/\b(\d{1,2}:\d{2})\b/g, (_, t) => {
+    const words = timeToWords(t);
+    return words.length ? words[0] : t;
+  });
+  // Year: 4-digit number 1000–2099
+  result = result.replace(/\b(1[0-9]{3}|20[0-9]{2})\b/g, (_, y) => {
+    const words = yearToWords(parseInt(y));
+    return words.length ? words[0] : y;
+  });
+  // Bare hour: single/double digit followed by am/pm
+  result = result.replace(/\b(\d{1,2})\s*(am|pm)\b/gi, (_, h) => `${_nw(parseInt(h))} o clock`);
+  // Ordinal date: 15th, 3rd etc — already handled by norm stripping punctuation
+  return result;
+}
+
+function match(user, correct) {
+  const c = norm(correct);
+  // Try raw user input first
+  const u = norm(user);
+  if (u === c) return true;
+  const ct = c.split(/\s+/).filter(Boolean);
+  const ut = u.split(/\s+/).filter(Boolean);
+  if (ct.every(t => ut.includes(t))) return true;
+
+  // Try after expanding numerics in user input
+  const uExp = norm(expandNumerics(user));
+  if (uExp === c) return true;
+  const utExp = uExp.split(/\s+/).filter(Boolean);
+  if (ct.every(t => utExp.includes(t))) return true;
+
+  return false;
 }
 
 // ══════════════════════════════════════════
